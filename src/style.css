@@ -4,9 +4,10 @@
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css");
 
 :root {
-  --available-color-schemes: light dark;
+  /* --available-color-schemes: light dark; */
+  --available-color-schemes: dark;
   --background-color: light-dark(#fff8dc, #2c2c2c);
-  --text-color: light-dark(#333333, #e0e0e0);
+  --text-color: light-dark(#333333, #ffffff);
   color-scheme: var(--available-color-schemes);
 }
 
