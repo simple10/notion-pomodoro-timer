@@ -76,7 +76,10 @@ closeModalBtn.addEventListener('click', () => {
 function startTimer() {
   timerStarted = true;
   startStopBtn.textContent = 'Stop';
+
   localStorage.setItem("timerStarted", "true");
+  localStorage.setItem("endTime", (Date.now() + timeLeft * 1000).toString()); // Store expected end timestamp
+
   timerInterval = setInterval(() => {
     timeLeft--;
     updateTimeLeftTextContent();
@@ -104,6 +107,7 @@ function stopTimer() {
   clearInterval(timerInterval);
   timerStarted = false;
   localStorage.setItem("timerStarted", "false");
+  localStorage.removeItem("endTime");
   startStopBtn.textContent = 'Start';
 }
 
@@ -118,17 +122,10 @@ function updateTimeLeftTextContent() {
 function applyUserPreferences() {
   // Retrieve user preferences from localStorage
   const savedBackgroundImage = localStorage.getItem('backgroundImage');
-  const savedTimeLeft = localStorage.getItem('timeLeft'); // Retrieve saved time left
 
   // Apply the preferences if they exist in localStorage
   if (savedBackgroundImage) {
     document.body.style.backgroundImage = `url('${savedBackgroundImage}')`;
-  }
-
-  // Restore the timer if time left is saved
-  if (savedTimeLeft) {
-    timeLeft = parseInt(savedTimeLeft, 10);
-    updateTimeLeftTextContent();
   }
 }
 
@@ -154,17 +151,22 @@ backgroundImageSelect.addEventListener('change', (event) => {
   }
 });
 
-
 function init() {
   // Apply user preferences on page load
-  applyUserPreferences();
+  applyUserPreferences()
 
-  // Resume timer if it was running before
-  const savedTimeLeft = localStorage.getItem('timeLeft');
-  const savedTimerStarted = localStorage.getItem('timerStarted') === 'true';
-  if (savedTimerStarted && savedTimeLeft && parseInt(savedTimeLeft, 10) > 0) {
-      timeLeft = parseInt(savedTimeLeft, 10);
-      startTimer();
+  // Restore time left
+  const savedTimeLeft = parseInt(localStorage.getItem("timeLeft") || "0", 10)
+  const savedTimerStarted = localStorage.getItem("timerStarted") === "true"
+  const savedEndTime = parseInt(localStorage.getItem("endTime") || "0", 10)
+  if (savedTimeLeft) {
+    timeLeft = savedTimeLeft
+    updateTimeLeftTextContent()
+  }
+  // Start timer if it was previously running and end time is in the future
+  if (savedTimerStarted && savedEndTime && savedEndTime > Date.now()) {
+    timeLeft = Math.round((savedEndTime - Date.now()) / 1000)
+    startTimer()
   }
 }
 
