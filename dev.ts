@@ -27,6 +27,12 @@ const server = Bun.serve({
       });
     }
 
+    if (path.startsWith("/assets/sounds/")) {
+      return new Response(Bun.file("src/" + path), {
+        headers: { "Content-Type": "audio/mpeg" },
+      })
+    }
+
     return new Response("Not Found", { status: 404 });
   },
 });

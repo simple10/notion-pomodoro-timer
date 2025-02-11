@@ -2,10 +2,18 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
 async function build() {
+  // Delete dist folder if it exists
+  const { rmSync } = require('fs');
+  try {
+    rmSync('dist', { recursive: true, force: true });
+    console.log('Cleaned dist folder');
+  } catch (err) {
+    // Ignore error if folder doesn't exist
+  }
+
   // Read files
   const html = readFileSync("src/index.html", "utf-8");
   const css = readFileSync("src/style.css", "utf-8");
-  const js = readFileSync("src/script.ts", "utf-8");
 
   // Transpile TypeScript to JavaScript
   const transpiledJs = await Bun.build({
@@ -27,6 +35,10 @@ async function build() {
 
   // Write the bundled file
   writeFileSync(join("dist", "index.html"), bundledHTML);
+
+  // Copy assets folder recursively
+  const { spawnSync } = require('child_process');
+  spawnSync('cp', ['-r', 'src/assets', 'dist/']);
 
   console.log("Build complete! Output written to dist/index.html");
 }
