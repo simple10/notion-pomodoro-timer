@@ -38,28 +38,13 @@ longBreakIntervalBtn.addEventListener('click', () => {
   updateTimeLeftTextContent();
 });
 
-// Event listeners for start/stop button
-startStopBtn.addEventListener('click', (e) => {
-  e.stopPropagation(); // Prevent document click from firing
-  toggleTimer();
-});
-
-// Event listener for document click, ignore clicks on buttons and modal
-// Allows clicking anywhere on the page to toggle timer
-document.addEventListener('click', (e) => {
-  // Ignore clicks on buttons and modal
-  if (
-    e.target instanceof HTMLButtonElement ||
-    e.target instanceof HTMLSelectElement ||
-    (e.target instanceof HTMLElement && e.target.closest('.modal'))
-  ) {
-    return;
-  }
-  toggleTimer();
-});
+// Event listeners for start/stop button and time left element click
+startStopBtn.addEventListener('click', toggleTimer);
+timeLeftEl.addEventListener("click", toggleTimer);
 
 // Helper function to toggle timer state
-function toggleTimer() {
+function toggleTimer(e: Event) {
+  e &&e.stopPropagation();
   if (!timerStarted) {
     startTimer();
   } else {
