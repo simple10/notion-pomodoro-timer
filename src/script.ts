@@ -15,7 +15,7 @@ const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeModalBtn = document.querySelector('.close-btn');
 const backgroundColorSelect = document.getElementById('background-color');
-const backgroundImageSelect = document.getElementById('background-image'); // Updated ID
+const backgroundImageSelect = document.getElementById('background-image') as HTMLSelectElement;
 const saveBtn = document.getElementById('save-btn');
 
 // Event listeners for interval buttons
@@ -115,7 +115,7 @@ function applyUserPreferences() {
   // Apply the preferences if they exist in localStorage
   if (savedBackgroundImage) {
     document.body.style.backgroundImage = `url('${savedBackgroundImage}')`;
-  }  
+  }
 }
 
 // Event listener for save button in the settings modal

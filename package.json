@@ -1,0 +1,12 @@
+{
+  "name": "pomodoro-timer",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run dev.ts",
+    "build": "bun run build.ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

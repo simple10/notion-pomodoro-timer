@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomodoro Timer - Minimalist Pomodoro Timer for Working and Studying</title>
+  <link rel="stylesheet" href="./style.css">
+  <!-- Additional CSS Link for Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Karla&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik&display=swap" rel="stylesheet">
+<style>/* Font imports and global styles */
+@import url("https://fonts.googleapis.com/css2?family=Karla&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Rubik&display=swap");
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css");
+
+body {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+body {
+  font-family: "Rubik", sans-serif;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  background-image: url("https://images.unsplash.com/photo-1620121692029-d088224ddc74?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1632&q=80g"); /* Default background image */
+  background-size: cover;
+}
+
+/* Pomodoro container styles */
+#pomodoro-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1.1rem;
+  box-sizing: border-box;
+  color:white;
+}
+
+/* Interval container styles */
+#interval-container {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Timer container styles */
+#timer-container {
+  margin-top: 0.125rem;
+}
+
+/* Start/stop/reset container styles */
+#start-stop-reset-container {
+  margin-top: 0.125rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Time left styles */
+#time-left {
+  font-family: "Karla", sans-serif;
+  font-size: 10.375rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 1rem;
+  letter-spacing: -5px;
+}
+
+/* Button styles */
+.interval-btn,
+#start-stop-btn,
+#reset-btn,
+#settings-btn {
+  border-radius: 50px;
+  border: 1px solid white;
+  color: white;
+  font-family: "Rubik", sans-serif;
+  font-size: 1rem;
+  margin: 0.313rem;
+  padding: 0.313rem 0.5rem;
+  text-align: center;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  background-color: transparent; /* Set the background color to transparent */
+}
+
+.interval-btn:hover,
+#start-stop-btn:hover,
+#reset-btn:hover,
+#settings-btn:hover {
+  background-color: white;
+  color: black;
+  border-color: white;
+  cursor: pointer;
+}
+
+/* Settings modal styles */
+#settings-modal {
+  font-family: Rubik;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  width: 300px;
+  font-family: Rubik;
+  color: black;
+  align-items: center;
+  justify-content: center;
+  background-color: #f7f6f3;
+  padding: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.close-btn {
+  color: #000;
+  float: right;
+  font-size: 30px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.setting-option {
+  align-item: center;
+  font-family: Rubik;
+  margin-bottom: 10px;
+}
+
+.setting-wrapper {
+  text-align: center;
+  flex-direction: column;
+  display: flex;
+  align-item: center;
+}
+
+.setting-option label {
+  text-align: center;
+  align-item: center;
+  font-family: Rubik;
+  margin-right: 10px;
+}
+
+#save-btn {
+  margin-top: 10px;
+  width: 60%;
+  font-family: Rubik;
+  background-color: black;
+  color: #fff;
+  border: none;
+  border-radius: 100px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+#save-btn:hover {
+  background-color: grey;
+  color: white;
+  width: 60;
+}
+
+#option {
+  font-family: Rubik;
+}
+
+select {
+  /* A reset of styles, including removing the default dropdown arrow */
+  appearance: none;
+  /* Additional resets for further consistency */
+  background-color: transparent;
+  border: none;
+  padding: 0 1em 0 0;
+  margin: 10px;
+  width: 60%;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: inherit;
+  line-height: inherit;
+}
+
+
+/* Media Query for Responsive Design */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+    overflow-y: auto; /* Allowing vertical scrolling */
+  }
+
+  #pomodoro-container {
+    max-width: 90%;
+  }
+
+  /* Adjust other styles as needed for responsive behavior */
+}</style></head>
+<body>
+  <div id="pomodoro-container">
+    <div id="interval-container">
+      <button id="short-break-interval-btn" class="interval-btn">Short Break</button>
+      <button id="pomodoro-interval-btn"class="interval-btn">Focus</button>
+      <button id="long-break-interval-btn"class="interval-btn">Long Break</button>
+    </div>
+    <div id="timer-container">
+      <div id="time-left">25:00</div>
+    </div>
+    <div id="start-stop-reset-container">
+      <button id="start-stop-btn">Start</button>
+      <button id="reset-btn"><i class="fas fa-redo-alt"></i></button>
+      <button id="settings-btn"><i class="fas fa-cog"></i></button>
+    </div>
+  </div>
+
+  <!-- Modal for Settings -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <div class="setting-wrapper">
+        <h3>Settings</h3>
+        <div class="setting-option">
+          <label for="background-image"></label>
+          <select id="background-image">
+            <option value="">Choose a theme</option>
+            <option value="https://r4.wallpaperflare.com/wallpaper/15/759/615/the-wind-rises-hayao-miyazaki-anime-movie-scenes-japanese-garden-hd-wallpaper-51c3836b15f07f89a7dbc57c98cb4792.jpg">Anime Scenary</option>
+            <option value="https://images.unsplash.com/photo-1573767291321-c0af2eaf5266?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2036&q=80">Cyberpunk</option>
+            <option value="https://images.unsplash.com/photo-1509114397022-ed747cca3f65?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1935&q=80">Aesthetic</option>
+            <option value="https://images.unsplash.com/photo-1620121692029-d088224ddc74?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1632&q=80g">3D Render</option>
+            <option value="https://images.unsplash.com/photo-1629277152917-966a1f1705cd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1932&q=80">Hologram</option>
+            <option value="https://pbs.twimg.com/media/Ddp3-YtWAAAVfml?format=jpg&name=large">Anime City at Night</option>
+            <option value="https://images.unsplash.com/photo-1528360983277-13d401cdc186?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80">Tokyo</option>
+            <option value="https://images.unsplash.com/photo-1568864453925-206c927dab0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80">Forest</option>
+            <option value="https://cdn.discordapp.com/attachments/1064320124653412463/1142867174692769792/Glivereth_90s_anime_street_view_eye_level_vibran_color_green_pu_ee853d74-19d1-45de-b8f0-23d71ce37261.png">Lo Fi</option>
+                  <option value="https://images.unsplash.com/photo-1676513727408-631151da9fc1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1632&q=80">Light Gradient</option>
+                     <option value="https://images.unsplash.com/photo-1687851898832-650714860119?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80">Dark Gradient</option>
+            <!-- Add more image options as needed -->
+          </select>
+          <button id="save-btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></script>
+  <script>var j=1500,G,q="pomodoro";var Q=document.getElementById("time-left"),D=document.getElementById("start-stop-btn"),R=document.getElementById("reset-btn"),V=document.getElementById("pomodoro-interval-btn"),W=document.getElementById("short-break-interval-btn"),X=document.getElementById("long-break-interval-btn"),Y=document.getElementById("settings-btn"),J=document.getElementById("settings-modal"),Z=document.querySelector(".close-btn"),b=document.getElementById("background-color"),_=document.getElementById("background-image"),$=document.getElementById("save-btn");V.addEventListener("click",()=>{q="pomodoro",j=1500,F()});W.addEventListener("click",()=>{q="short-break",j=300,F()});X.addEventListener("click",()=>{q="long-break",j=600,F()});D.addEventListener("click",()=>{if(D.textContent==="Start")H(),D.textContent="Stop";else K()});R.addEventListener("click",()=>{if(K(),q==="pomodoro")j=1500;else if(q==="short-break")j=300;else j=600;F(),D.textContent="Start"});Y.addEventListener("click",()=>{J.style.display="flex"});Z.addEventListener("click",()=>{J.style.display="none"});function H(){G=setInterval(()=>{if(j--,F(),j===0)if(clearInterval(G),q==="pomodoro")j=300,q="short-break",H();else if(q==="short-break")j=600,q="long-break",H();else j=1500,q="pomodoro"},1000)}function K(){clearInterval(G),D.textContent="Start"}function F(){let z=Math.floor(j/60),O=j%60;Q.textContent=`${z.toString().padStart(2,"0")}:${O.toString().padStart(2,"0")}`}function N(){let z=localStorage.getItem("backgroundImage");if(z)document.body.style.backgroundImage=`url('${z}')`}$.addEventListener("click",()=>{let z=_.value;localStorage.setItem("backgroundImage",z),N(),J.style.display="none"});N();
+</script>
+</body>
+</html>
