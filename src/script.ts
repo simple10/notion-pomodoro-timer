@@ -1,4 +1,5 @@
 // Global variables
+let timerStarted = false;
 let timeLeft = 25 * 60; // seconds
 let timerInterval;
 let currentInterval = 'pomodoro';
@@ -39,9 +40,8 @@ longBreakIntervalBtn.addEventListener('click', () => {
 
 // Event listener for start/stop button
 startStopBtn.addEventListener('click', () => {
-  if (startStopBtn.textContent === 'Start') {
+  if (!timerStarted) {
     startTimer();
-    startStopBtn.textContent = 'Stop';
   } else {
     stopTimer();
   }
@@ -69,13 +69,18 @@ settingsBtn.addEventListener('click', () => {
 // Event listener for close button in the settings modal
 closeModalBtn.addEventListener('click', () => {
   settingsModal.style.display = 'none';
+  applyUserPreferences();
 });
 
 // Function to start the timer
 function startTimer() {
+  timerStarted = true;
+  startStopBtn.textContent = 'Stop';
+  localStorage.setItem("timerStarted", "true");
   timerInterval = setInterval(() => {
     timeLeft--;
     updateTimeLeftTextContent();
+    localStorage.setItem('timeLeft', timeLeft.toString()); // Save remaining time to localStorage
     if (timeLeft === 0) {
       clearInterval(timerInterval);
       if (currentInterval === 'pomodoro') {
@@ -97,6 +102,8 @@ function startTimer() {
 // Function to stop the timer
 function stopTimer() {
   clearInterval(timerInterval);
+  timerStarted = false;
+  localStorage.setItem("timerStarted", "false");
   startStopBtn.textContent = 'Start';
 }
 
@@ -111,10 +118,17 @@ function updateTimeLeftTextContent() {
 function applyUserPreferences() {
   // Retrieve user preferences from localStorage
   const savedBackgroundImage = localStorage.getItem('backgroundImage');
+  const savedTimeLeft = localStorage.getItem('timeLeft'); // Retrieve saved time left
 
   // Apply the preferences if they exist in localStorage
   if (savedBackgroundImage) {
     document.body.style.backgroundImage = `url('${savedBackgroundImage}')`;
+  }
+
+  // Restore the timer if time left is saved
+  if (savedTimeLeft) {
+    timeLeft = parseInt(savedTimeLeft, 10);
+    updateTimeLeftTextContent();
   }
 }
 
@@ -132,5 +146,26 @@ saveBtn.addEventListener('click', () => {
   settingsModal.style.display = 'none';
 });
 
-// Apply user preferences on page load
-applyUserPreferences();
+// Event listener for background image select changes
+backgroundImageSelect.addEventListener('change', (event) => {
+  const selectedImage = (event.target as HTMLSelectElement).value;
+  if (selectedImage) {
+    document.body.style.backgroundImage = `url('${selectedImage}')`;
+  }
+});
+
+
+function init() {
+  // Apply user preferences on page load
+  applyUserPreferences();
+
+  // Resume timer if it was running before
+  const savedTimeLeft = localStorage.getItem('timeLeft');
+  const savedTimerStarted = localStorage.getItem('timerStarted') === 'true';
+  if (savedTimerStarted && savedTimeLeft && parseInt(savedTimeLeft, 10) > 0) {
+      timeLeft = parseInt(savedTimeLeft, 10);
+      startTimer();
+  }
+}
+
+init();
