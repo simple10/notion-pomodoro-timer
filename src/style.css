@@ -124,7 +124,7 @@ body {
 }
 
 .setting-option {
-  align-item: center;
+  align-items: center;
   font-family: Rubik;
   margin-bottom: 10px;
 }
@@ -133,12 +133,12 @@ body {
   text-align: center;
   flex-direction: column;
   display: flex;
-  align-item: center;
+  align-items: center;
 }
 
 .setting-option label {
   text-align: center;
-  align-item: center;
+  align-items: center;
   font-family: Rubik;
   margin-right: 10px;
 }
