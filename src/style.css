@@ -3,9 +3,15 @@
 @import url("https://fonts.googleapis.com/css2?family=Rubik&display=swap");
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css");
 
-body {
-  overflow-x: hidden;
-  overflow-y: hidden;
+:root {
+  --available-color-schemes: light dark;
+  --background-color: light-dark(#fff8dc, #2c2c2c);
+  --text-color: light-dark(#333333, #e0e0e0);
+  color-scheme: var(--available-color-schemes);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -14,6 +20,8 @@ body {
   overflow-y: hidden;
   background-image: url("https://images.unsplash.com/photo-1620121692029-d088224ddc74?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1632&q=80g"); /* Default background image */
   background-size: cover;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 /* Pomodoro container styles */
@@ -27,7 +35,6 @@ body {
   margin: 0 auto;
   padding: 1.1rem;
   box-sizing: border-box;
-  color:white;
 }
 
 /* Interval container styles */
