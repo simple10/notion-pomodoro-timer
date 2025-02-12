@@ -223,6 +223,7 @@ function playTimerSound() {
   ) {
     state.playingSound = true
     console.log("Playing sound")
+    audio.currentTime = 0 // Reset the audio to the start
     audio.play().catch((error) => {
       // Check if the error name is "NotAllowedError"
       if (error.name === "NotAllowedError") {
@@ -247,6 +248,14 @@ function playTimerSound() {
       }, 5000)
     }
   }
+}
+
+function stopSound() {
+  if (!audio.ended) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+  state.playingSound = false // Reset just in case
 }
 
 /***************************************************************
@@ -294,6 +303,8 @@ function initListeners(): void {
       if (state.remaining < 0) state.remaining = 0
       state.endTime = 0
     }
+    // Stop sound if playing; this is for UX if user needs to quickly stop the sound
+    stopSound()
     broadcastNewState(state)
   }
   // Enable clicking on the timer display to start/stop the timer
@@ -301,7 +312,7 @@ function initListeners(): void {
 
   // Reset button
   resetBtn.onclick = () => {
-    state.playingSound = false // Reset just in case
+    stopSound()
     setCurrentTimer(state.timer)
   }
 
