@@ -392,10 +392,10 @@ init()
  ***************************************************************/
 // DEBUGGING
 // Debug shortcut to set timer to 3 seconds. Useful for testing how breaks work when timer runs out.
-document.addEventListener("keydown", (event) => {
-  if (event.key === "3") {
-    state.remaining = 3 * 1000
-    state.endTime = Date.now() + state.remaining
-    broadcastNewState(state)
-  }
-})
+// document.addEventListener("keydown", (event) => {
+//   if (event.key === "3") {
+//     state.remaining = 3 * 1000
+//     state.endTime = Date.now() + state.remaining
+//     broadcastNewState(state)
+//   }
+// })
