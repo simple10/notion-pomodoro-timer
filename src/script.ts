@@ -359,6 +359,9 @@ function init() {
   state = loadState() || INITIAL_STATE
   state.playingSound = false // Reset playingSound state
   settings = loadSettings() || INITIAL_SETTINGS
+  if (!settings.bgImage) {
+    settings.bgImage = bgImageSelect.value
+  }
   applySettings(settings)
   if (state.running) {
     const now = Date.now()
