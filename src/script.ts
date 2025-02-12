@@ -151,11 +151,18 @@ function setTimerInterval(interval: number = 500): Timer {
       const now = Date.now()
       const newRemaining = state.endTime - now
 
+      // Check if countdown reached zero
       if (newRemaining <= 0) {
-        // Countdown has reached zero, reset state
-        state = INITIAL_STATE
+        // Change to next timer
+        // focus -> shortBreak -> reset
+        // longBreak -> reset
         playTimerSound()
-        broadcastNewState(state)
+        if (state.timer === "focus") {
+          setCurrentTimer("shortBreak")
+        } else {
+          state.running = false
+          setCurrentTimer("focus")
+        }
       } else {
         // Still counting down
         state.remaining = newRemaining
