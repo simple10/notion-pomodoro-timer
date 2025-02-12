@@ -22,6 +22,7 @@ const INITIAL_STATE = {
   remaining: TIMERS.focus,
   endTime: 0,
   timer: "focus" as keyof typeof TIMERS,
+  playingSound: false, // Whether the sound is currently playing
 }
 
 const INITIAL_SETTINGS = {
@@ -33,6 +34,7 @@ const INITIAL_SETTINGS = {
 let state: State = INITIAL_STATE
 let settings: Settings = INITIAL_SETTINGS
 let timerInterval: Timer
+let audio: HTMLAudioElement
 
 const broadcastChannel = new BroadcastChannel(CHANNEL_NAME)
 
@@ -152,6 +154,7 @@ function setTimerInterval(interval: number = 500): Timer {
       if (newRemaining <= 0) {
         // Countdown has reached zero, reset state
         state = INITIAL_STATE
+        playTimerSound()
         broadcastNewState(state)
       } else {
         // Still counting down
@@ -186,6 +189,30 @@ function updateDisplay() {
 
 function setBackgroundImage(image: string) {
   document.body.style.backgroundImage = `url('${image}')`
+}
+
+/***************************************************************
+ * Initialization Functions
+ ***************************************************************/
+
+/**
+ * Play the timer buzzer sound if enabled in settings and not currently playing
+ */
+async function playTimerSound() {
+  // Play sound if enabled in settings
+  if (!state.playingSound &&
+    (state.timer === "focus" && settings.sound) ||
+    (state.timer.includes("break") && settings.soundBreaks)
+  ) {
+    if (typeof audio != "object") {
+      audio = new Audio("assets/sounds/alarm1.mp3")
+    }
+    state.playingSound = true
+    await audio.play()
+    state.playingSound = false
+    // Notify other tabs that the sound has stopped playing
+    broadcastNewState(state)
+  }
 }
 
 /***************************************************************
