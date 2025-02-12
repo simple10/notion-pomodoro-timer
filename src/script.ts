@@ -1,257 +1,202 @@
-// State variables
-const state = {
-  timerInterval: null,
-  timerStarted: false,
-  timeLeft: 25 * 60, // Defaults to 25 minutes
-  currentInterval: "pomodoro",
-  sound: true,
-  soundBreaks: true,
-}
-// let backgroundColor = '#F1F1EF'; // Default background color
+/***************************************************************
+ * State Management
+ ***************************************************************/
+// localStorage key for state
+const STORAGE_KEY = "timer-state"
 
-let audio: HTMLAudioElement
+// BroadcastChannel name to sync states between tabs
+const CHANNEL_NAME = "timer-channel"
 
-// DOM elements
-const timeLeftEl = document.getElementById("time-left")
-const startStopBtn = document.getElementById("start-stop-btn")
-const resetBtn = document.getElementById("reset-btn")
-const pomodoroIntervalBtn = document.getElementById("pomodoro-interval-btn")
-const shortBreakIntervalBtn = document.getElementById(
-  "short-break-interval-btn"
-)
-const longBreakIntervalBtn = document.getElementById("long-break-interval-btn")
-const settingsBtn = document.getElementById("settings-btn")
-const settingsModal = document.getElementById("settings-modal")
-const closeModalBtn = document.querySelector(".close-btn")
-const saveBtn = document.getElementById("save-btn")
-// const backgroundColorSelect = document.getElementById('background-color');
-
-// Settings
-const backgroundImageSelect = document.getElementById(
-  "background-image"
-) as HTMLSelectElement
-const soundCheckbox = document.getElementById(
-  "option-sound"
-) as HTMLInputElement
-const soundBreaksCheckbox = document.getElementById(
-  "option-sound-breaks"
-) as HTMLInputElement
-
-const intervals = {
-  pomodoro: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 10 * 60,
+const TIMERS = {
+  pomodoro: 25 * 60 * 1000, // 25 minutes
+  shortBreak: 5 * 60 * 1000, // 5 minutes
+  longBreak: 10 * 60 * 1000, // 10 minutes
 }
 
-function setCurrentTimer(interval: keyof typeof intervals) {
-  state.currentInterval = interval
-  state.timeLeft = intervals[interval]
-  updateTimeLeftTextContent()
-  localStorage.setItem("currentInterval", interval)
+type State = {
+  running: boolean
+  remaining: number // milliseconds
+  endTime: number
 }
 
-// Event listeners for interval buttons
-pomodoroIntervalBtn.addEventListener("click", () => {
-  setCurrentTimer("pomodoro")
-})
+let state: State = initState()
+let timerInterval: Timer
 
-shortBreakIntervalBtn.addEventListener("click", () => {
-  setCurrentTimer("shortBreak")
-})
-
-longBreakIntervalBtn.addEventListener("click", () => {
-  setCurrentTimer("longBreak")
-})
-
-// Event listener for double click on time left element to reset timer
-timeLeftEl.addEventListener("dblclick", (e) => {
-  e.stopPropagation()
-  resetTimer()
-})
-
-// Event listeners for start/stop button and time left element click
-startStopBtn.addEventListener("click", toggleTimer)
-timeLeftEl.addEventListener("click", toggleTimer)
-
-// Helper function to toggle timer state
-function toggleTimer(e: Event) {
-  e && e.stopPropagation()
-  if (!state.timerStarted) {
-    startTimer()
-  } else {
-    stopTimer()
+function initState(): State {
+  return {
+    running: false,
+    remaining: TIMERS.pomodoro,
+    endTime: 0,
   }
 }
 
-// Event listener for reset button
-resetBtn.addEventListener("click", resetTimer)
+/***************************************************************
+ * DOM Elements
+ ***************************************************************/
+const timerDisplay = document.getElementById("time-left")
+const startStopBtn = document.getElementById("start-stop-btn")
+const stopBtn = document.getElementById("stopBtn")
+const resetBtn = document.getElementById("reset-btn")
 
-// Event listener for settings button
-settingsBtn.addEventListener("click", () => {
-  settingsModal.style.display = "flex"
-})
+/***************************************************************
+ * Broadcast Channel Setup
+ ***************************************************************/
+const broadcastChannel = new BroadcastChannel(CHANNEL_NAME)
 
-// Event listener for close button in the settings modal
-closeModalBtn.addEventListener("click", () => {
-  settingsModal.style.display = "none"
-  applyUserPreferences()
-})
 
-// Function to start the timer
-function startTimer() {
-  clearInterval(state.timerInterval)
-  state.timerStarted = true
-  startStopBtn.textContent = "Stop"
 
-  localStorage.setItem("timerStarted", "true")
-  localStorage.setItem(
-    "endTime",
-    (Date.now() + state.timeLeft * 1000).toString()
-  ) // Store expected end timestamp
+/**
+ * Attempt to load state from localStorage
+ */
+function loadStateFromLocalStorage(): State | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    // If JSON parsing fails or item doesn't exist, return null
+    return null
+  }
+}
 
-  state.timerInterval = setInterval(() => {
-    state.timeLeft--
-    updateTimeLeftTextContent()
-    localStorage.setItem("timeLeft", state.timeLeft.toString()) // Save remaining time to localStorage
-    if (state.timeLeft === 0) {
-      clearInterval(state.timerInterval)
-      if (state.currentInterval === "pomodoro") {
-        state.sound && playSound()
-        setCurrentTimer("shortBreak")
-        startTimer()
-      } else if (state.currentInterval === "shortBreak") {
-        state.soundBreaks && playSound()
-        setCurrentTimer("longBreak")
-        startTimer()
+/**
+ * Save the current state to localStorage
+ */
+function saveStateToLocalStorage(state: State): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+}
+
+/**
+ * Set the interval for the timer
+ * @param interval - interval in milliseconds, 500 is twice a second
+ */
+function setTimerInterval(interval: number = 500): Timer {
+  clearInterval(timerInterval)
+  timerInterval = setInterval(() => {
+    if (state.running) {
+      // Recalculate how much time is left
+      const now = Date.now();
+      const newRemaining = state.endTime - now;
+
+      if (newRemaining <= 0) {
+        // Countdown has reached zero, reset state
+        state = initState()
+        broadcastNewState(state);
       } else {
-        state.soundBreaks && playSound()
-        setCurrentTimer("pomodoro")
-        stopTimer()
+        // Still counting down
+        state.remaining = newRemaining;
+        updateDisplay();
       }
     }
-  }, 1000)
+  }, interval); // update 5 times a second
+  return timerInterval
 }
 
-// Function to stop the timer
-function stopTimer() {
-  clearInterval(state.timerInterval)
-  state.timerStarted = false
-  localStorage.setItem("timerStarted", "false")
-  localStorage.removeItem("endTime")
-  startStopBtn.textContent = "Start"
-}
 
-function resetTimer() {
-  stopTimer()
-  if (state.currentInterval === "pomodoro") {
-    state.timeLeft = intervals.pomodoro
-  } else if (state.currentInterval === "shortBreak") {
-    state.timeLeft = intervals.shortBreak
-  } else {
-    state.timeLeft = intervals.longBreak
+function initListeners(): void {
+  // Listen for incoming messages from other tabs
+  broadcastChannel.onmessage = (event) => {
+    if (!event.data) return
+    state = event.data
+    // Persist new state
+    saveStateToLocalStorage(state)
+    // Update our display
+    updateDisplay()
   }
-  updateTimeLeftTextContent()
-  startStopBtn.textContent = "Start"
-}
 
-function playSound() {
-  if (typeof audio != "object") {
-    audio = new Audio("assets/sounds/alarm1.mp3")
+  // Start/Stop button
+  startStopBtn.onclick = () => {
+    if (!state.running) {
+      // Start the timer and reset if it has ended
+      state.running = true
+      // If countdown has ended (remainingMs <= 0), reset it to 25 min
+      if (state.remaining <= 0) {
+        state.remaining = TIMERS.pomodoro
+      }
+      state.endTime = Date.now() + state.remaining
+    } else {
+      // Stop the timer and store how much time was left
+      state.running = false
+      const now = Date.now()
+      state.remaining = state.endTime - now
+      if (state.remaining < 0) state.remaining = 0
+      state.endTime = 0
+    }
+    broadcastNewState(state)
   }
-  audio.play()
-}
 
-// Function to update the time left text content
-function updateTimeLeftTextContent() {
-  const minutes = Math.floor(state.timeLeft / 60)
-  const seconds = state.timeLeft % 60
-  timeLeftEl.textContent = `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}`
-}
-
-// Function to apply the user's saved preferences
-function applyUserPreferences() {
-  // Retrieve user preferences from localStorage
-  const savedBackgroundImage = localStorage.getItem("backgroundImage")
-  const savedSound = localStorage.getItem("sound")
-  const savedSoundBreaks = localStorage.getItem("soundBreaks")
-
-  // Apply the preferences if they exist in localStorage
-  if (savedBackgroundImage) {
-    document.body.style.backgroundImage = `url('${savedBackgroundImage}')`
-  }
-  if (savedSound) {
-    state.sound = savedSound === "true"
-  }
-  if (savedSoundBreaks) {
-    state.soundBreaks = savedSoundBreaks === "true"
+  // Reset button
+  resetBtn.onclick = () => {
+    state = initState()
+    broadcastNewState(state)
   }
 }
 
-// Event listener for save button in the settings modal
-saveBtn.addEventListener("click", () => {
-  const newBackgroundImage = backgroundImageSelect.value
+/**
+ * Update the display based on current state
+ */
+function updateDisplay() {
+  // Display the current remainingMs in mm:ss format
+  let remaining = state.remaining
+  if (remaining < 0) remaining = 0
 
-  // Save preferences to localStorage
-  localStorage.setItem("backgroundImage", newBackgroundImage)
-  localStorage.setItem("sound", soundCheckbox.checked.toString())
-  localStorage.setItem("soundBreaks", soundBreaksCheckbox.checked.toString())
+  const totalSeconds = Math.floor(remaining / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
 
-  // Apply the new saved preferences
-  applyUserPreferences()
+  // Format as MM:SS
+  const minuteStr = String(minutes).padStart(2, "0")
+  const secondStr = String(seconds).padStart(2, "0")
 
-  // Close the modal after saving preferences
-  settingsModal.style.display = "none"
-})
+  timerDisplay.textContent = `${minuteStr}:${secondStr}`
 
-// Event listener for background image select changes
-backgroundImageSelect.addEventListener("change", (event) => {
-  const selectedImage = (event.target as HTMLSelectElement).value
-  if (selectedImage) {
-    document.body.style.backgroundImage = `url('${selectedImage}')`
-  }
-})
+  startStopBtn.textContent = state.running ? "Stop" : "Start"
+}
+
+/**
+ * Broadcast the current state to other tabs and save locally
+ */
+function broadcastNewState(newState) {
+  saveStateToLocalStorage(newState)
+  broadcastChannel.postMessage(newState)
+  updateDisplay()
+}
+
+
 
 function init() {
-  const savedSound = localStorage.getItem("sound")
-  const savedSoundBreaks = localStorage.getItem("soundBreaks")
-  if (savedSound) {
-    soundCheckbox.checked = savedSound === "true"
-  }
-  if (savedSoundBreaks) {
-    soundBreaksCheckbox.checked = savedSoundBreaks === "true"
-  }
-  const savedCurrentInterval = localStorage.getItem("currentInterval")
-  if (savedCurrentInterval) {
-    state.currentInterval = savedCurrentInterval as keyof typeof intervals
+  state = loadStateFromLocalStorage() || initState()
+
+  if (state.running) {
+    const now = Date.now()
+    const newRemaining = state.endTime - now
+    if (newRemaining <= 0) {
+      // Timer ran out while page was closed
+      state.running = false
+      state.remaining = 0
+      state.endTime = 0
+      saveStateToLocalStorage(state)
+    } else {
+      state.remaining = newRemaining
+    }
   }
 
-  // Apply user preferences on page load
-  applyUserPreferences()
+  initListeners()
 
-  // Restore time left
-  const savedTimeLeft = parseInt(localStorage.getItem("timeLeft") || "0", 10)
-  const savedTimerStarted = localStorage.getItem("timerStarted") === "true"
-  const savedEndTime = parseInt(localStorage.getItem("endTime") || "0", 10)
-  if (savedTimeLeft) {
-    state.timeLeft = savedTimeLeft
-    updateTimeLeftTextContent()
-  }
-  // Start timer if it was previously running and end time is in the future
-  if (savedTimerStarted && savedEndTime && savedEndTime > Date.now()) {
-    state.timeLeft = Math.round((savedEndTime - Date.now()) / 1000)
-    startTimer()
-  }
+  // On page load, sync the display
+  updateDisplay()
+
+  setTimerInterval()
 }
 
 init()
+// State variables
 
 // DEBUGGING
 // Debug shortcut to set timer to 3 seconds. Useful for testing how breaks work when timer runs out.
-// document.addEventListener("keydown", (event) => {
-//   if (event.key === "3") {
-//     state.timeLeft = 3
-//     updateTimeLeftTextContent()
-//   }
-// })
+document.addEventListener("keydown", (event) => {
+  if (event.key === "3") {
+    state.remaining = 3 * 1000
+    state.endTime = Date.now() + state.remaining
+    broadcastNewState(state)
+  }
+})

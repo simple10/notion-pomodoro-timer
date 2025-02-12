@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Synced & Persistent Counter</title>
+</head>
+<body>
+  <h1>Synced & Persistent Counter</h1>
+  <p>This is a simple timer that syncs between tabs with postMessage and maintains state with localStorage.</p>
+  <div id="timerDisplay" style="font-size: 2rem; margin-bottom: 1rem;">0.00</div>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn">Stop</button>
+
+  <script type="module">
+    /***************************************************************
+     * State Management
+     ***************************************************************/
+    // localStorage key for state
+    const STORAGE_KEY = "sync-timer-state";
+
+    // BroadcastChannel name to sync states between tabs
+    const CHANNEL_NAME = "sync-timer-channel";
+
+    /**
+     * Attempt to load state from localStorage
+     */
+    function loadStateFromLocalStorage() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        // If JSON parsing fails or item doesn't exist, return null
+        return null;
+      }
+    }
+
+    /**
+     * Save the current state to localStorage
+     */
+    function saveStateToLocalStorage(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    // Initialize state from localStorage or default
+    let state = loadStateFromLocalStorage() || {
+      running: false,
+      startTime: 0,
+      elapsedBeforeStart: 0,
+    };
+
+    /***************************************************************
+     * DOM Elements
+     ***************************************************************/
+    const timerDisplay = document.getElementById("timerDisplay");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    /***************************************************************
+     * Broadcast Channel Setup
+     ***************************************************************/
+    const broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+
+    // Listen for incoming messages from other tabs
+    broadcastChannel.onmessage = (event) => {
+      if (!event.data) return;
+      state = event.data;
+      // Persist new state
+      saveStateToLocalStorage(state);
+      // Update our display
+      updateDisplay();
+    };
+
+    /***************************************************************
+     * Interval to Update Display
+     ***************************************************************/
+    // Update about 10 times a second if running
+    setInterval(() => {
+      if (state.running) {
+        updateDisplay();
+      }
+    }, 100);
+
+    /***************************************************************
+     * Event Handlers
+     ***************************************************************/
+    startBtn.onclick = () => {
+      if (!state.running) {
+        state.running = true;
+        // Record the moment the timer starts
+        state.startTime = Date.now();
+        broadcastNewState(state);
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (state.running) {
+        // Calculate how long the timer has been running
+        const currentElapsed = Date.now() - state.startTime;
+        // Add that to the "elapsedBeforeStart" total
+        state.elapsedBeforeStart += currentElapsed;
+        // Mark the timer as stopped
+        state.running = false;
+        broadcastNewState(state);
+      }
+    };
+
+    /***************************************************************
+     * Helper Functions
+     ***************************************************************/
+    /**
+     * Update the display based on current state
+     */
+    function updateDisplay() {
+      let totalElapsed = state.elapsedBeforeStart;
+
+      // If running, add the time since startTime
+      if (state.running) {
+        totalElapsed += Date.now() - state.startTime;
+      }
+
+      const seconds = totalElapsed / 1000;
+      timerDisplay.textContent = seconds.toFixed(2);
+    }
+
+    /**
+     * Broadcast the current state to other tabs and save locally
+     */
+    function broadcastNewState(newState) {
+      // Save to localStorage
+      saveStateToLocalStorage(newState);
+      // Broadcast to other tabs
+      broadcastChannel.postMessage(newState);
+      // Update our own display
+      updateDisplay();
+    }
+
+    // On page load, make sure the display is correct
+    updateDisplay();
+  </script>
+</body>
+</html>

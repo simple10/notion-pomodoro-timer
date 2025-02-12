@@ -3,5 +3,6 @@
     "types": ["bun-types"],
     "module": "esnext",
     "target": "esnext"
-  }
-} 
+  },
+  "exclude": ["examples/**/*"]
+}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>25-Minute Countdown</title>
+</head>
+<body>
+  <h1>25-Minute Countdown</h1>
+  <div id="timerDisplay" style="font-size: 2rem; margin-bottom: 1rem;">25:00</div>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn">Stop</button>
+
+  <script type="module">
+    /***************************************************************
+     * Constants & Initial State
+     ***************************************************************/
+    const STORAGE_KEY = "countdown-timer-state";
+    const CHANNEL_NAME = "countdown-timer-channel";
+
+    // 25 minutes in milliseconds
+    const TWENTY_FIVE_MINUTES_MS = 25 * 60 * 1000;
+
+    /**
+     * Default state structure:
+     *  running       - is the countdown active?
+     *  remainingMs   - how many ms left in the countdown
+     *  endTime       - if running, the epoch time (Date.now() value) when the countdown should end
+     */
+    function getDefaultState() {
+      return {
+        running: false,
+        remainingMs: TWENTY_FIVE_MINUTES_MS,
+        endTime: 0
+      };
+    }
+
+    /***************************************************************
+     * Local Storage Helpers
+     ***************************************************************/
+    function loadStateFromLocalStorage() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveStateToLocalStorage(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    /***************************************************************
+     * Initialize State
+     ***************************************************************/
+    let state = loadStateFromLocalStorage() || getDefaultState();
+
+    /***************************************************************
+     * DOM References
+     ***************************************************************/
+    const timerDisplay = document.getElementById("timerDisplay");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    /***************************************************************
+     * BroadcastChannel
+     ***************************************************************/
+    const broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+
+    broadcastChannel.onmessage = (event) => {
+      if (!event.data) return;
+      state = event.data;
+      saveStateToLocalStorage(state);
+      updateDisplay();
+    };
+
+    /***************************************************************
+     * Timer Update (Interval)
+     ***************************************************************/
+    setInterval(() => {
+      if (state.running) {
+        // Recalculate how much time is left
+        const now = Date.now();
+        const newRemaining = state.endTime - now;
+
+        if (newRemaining <= 0) {
+          // Countdown has reached zero
+          state.running = false;
+          state.remainingMs = 0;
+          state.endTime = 0;
+          broadcastNewState(state);
+        } else {
+          // Still counting down
+          state.remainingMs = newRemaining;
+          updateDisplay();
+        }
+      }
+    }, 200); // update 5 times a second
+
+    /***************************************************************
+     * Event Handlers (Start/Stop)
+     ***************************************************************/
+    startBtn.onclick = () => {
+      if (!state.running) {
+        // If countdown has ended (remainingMs <= 0), reset it to 25 min
+        if (state.remainingMs <= 0) {
+          state.remainingMs = TWENTY_FIVE_MINUTES_MS;
+        }
+
+        state.running = true;
+        state.endTime = Date.now() + state.remainingMs;
+        broadcastNewState(state);
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (state.running) {
+        // Stop the countdown and store how much time was left
+        const now = Date.now();
+        state.remainingMs = state.endTime - now;
+        if (state.remainingMs < 0) state.remainingMs = 0;
+
+        state.running = false;
+        state.endTime = 0;
+        broadcastNewState(state);
+      }
+    };
+
+    /***************************************************************
+     * Helper Functions
+     ***************************************************************/
+    function updateDisplay() {
+      // Display the current remainingMs in mm:ss format
+      let remaining = state.remainingMs;
+      if (remaining < 0) remaining = 0;
+
+      const totalSeconds = Math.floor(remaining / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      // Format as MM:SS
+      const minuteStr = String(minutes).padStart(2, "0");
+      const secondStr = String(seconds).padStart(2, "0");
+
+      timerDisplay.textContent = `${minuteStr}:${secondStr}`;
+    }
+
+    function broadcastNewState(newState) {
+      saveStateToLocalStorage(newState);
+      broadcastChannel.postMessage(newState);
+      updateDisplay();
+    }
+
+    // On page load, if timer was running, it might need adjustment:
+    // - E.g., if user closed the page for a while, we need to recalc new remaining
+    if (state.running) {
+      const now = Date.now();
+      const newRemaining = state.endTime - now;
+      if (newRemaining <= 0) {
+        // Timer ran out while page was closed
+        state.running = false;
+        state.remainingMs = 0;
+        state.endTime = 0;
+        saveStateToLocalStorage(state);
+      } else {
+        state.remainingMs = newRemaining;
+      }
+    }
+
+    // Initial display
+    updateDisplay();
+  </script>
+</body>
+</html>
