@@ -1,69 +1,100 @@
 /***************************************************************
  * State Management
  ***************************************************************/
+
 // localStorage key for state
-const STORAGE_KEY = "timer-state"
+const STORAGE_KEYS = {
+  state: "timer-state",
+  settings: "timer-settings",
+}
 
 // BroadcastChannel name to sync states between tabs
 const CHANNEL_NAME = "timer-channel"
 
 const TIMERS = {
-  pomodoro: 25 * 60 * 1000, // 25 minutes
+  focus: 25 * 60 * 1000, // 25 minutes
   shortBreak: 5 * 60 * 1000, // 5 minutes
   longBreak: 10 * 60 * 1000, // 10 minutes
 }
 
-type State = {
-  running: boolean
-  remaining: number // milliseconds
-  endTime: number
+const INITIAL_STATE = {
+  running: false,
+  remaining: TIMERS.focus,
+  endTime: 0,
+  timer: "focus" as keyof typeof TIMERS,
 }
 
-let state: State = initState()
+const INITIAL_SETTINGS = {
+  sound: true, // Play sound when timer ends
+  soundBreaks: true, // Play sound when break ends
+  bgImage: "", // Background image
+}
+
+let state: State = INITIAL_STATE
+let settings: Settings = INITIAL_SETTINGS
 let timerInterval: Timer
 
-function initState(): State {
-  return {
-    running: false,
-    remaining: TIMERS.pomodoro,
-    endTime: 0,
-  }
-}
+const broadcastChannel = new BroadcastChannel(CHANNEL_NAME)
+
+/***************************************************************
+ * Types
+ ***************************************************************/
+
+type State = typeof INITIAL_STATE
+type Settings = typeof INITIAL_SETTINGS
 
 /***************************************************************
  * DOM Elements
  ***************************************************************/
+
+// Timer Display
 const timerDisplay = document.getElementById("time-left")
 const startStopBtn = document.getElementById("start-stop-btn")
-const stopBtn = document.getElementById("stopBtn")
 const resetBtn = document.getElementById("reset-btn")
 const timerFocusBtn = document.getElementById("timer-focus-btn")
 const timerShortBtn = document.getElementById("timer-short-btn")
 const timerLongBtn = document.getElementById("timer-long-btn")
 
-/***************************************************************
- * Broadcast Channel Setup
- ***************************************************************/
-const broadcastChannel = new BroadcastChannel(CHANNEL_NAME)
+// Settings
+const settingsBtn = document.getElementById("settings-btn")
+const settingsModal = document.getElementById("settings-modal")
+const closeModalBtn = document.querySelector(".close-btn")
+const saveBtn = document.getElementById("save-btn")
+const bgImageSelect = document.getElementById(
+  "background-image"
+) as HTMLSelectElement
+const soundCheckbox = document.getElementById(
+  "option-sound"
+) as HTMLInputElement
+const soundBreaksCheckbox = document.getElementById(
+  "option-sound-breaks"
+) as HTMLInputElement
 
-/**
- * Attempt to load state from localStorage
- */
-function loadStateFromLocalStorage(): State | null {
+/***************************************************************
+ * State Management Functions
+ ***************************************************************/
+
+function loadFromLocalStorage<T>(key: string): T | null {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(key)
     return stored ? JSON.parse(stored) : null
   } catch {
-    // If JSON parsing fails or item doesn't exist, return null
     return null
   }
 }
 
 /**
+ * Attempt to load state from localStorage
+ */
+function loadState(): State | null {
+  return loadFromLocalStorage<State>(STORAGE_KEYS.state)
+}
+
+/**
  * Save the current state to localStorage
  */
-function saveStateToLocalStorage(state: State): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+function saveState(_state: State): void {
+  localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(_state))
 }
 
 /**
@@ -73,8 +104,38 @@ function saveStateToLocalStorage(state: State): void {
 function setCurrentTimer(timer: keyof typeof TIMERS) {
   state.remaining = TIMERS[timer]
   state.endTime = Date.now() + state.remaining
+  state.timer = timer
   broadcastNewState(state)
 }
+
+/**
+ * Broadcast the current state to other tabs and save locally
+ */
+function broadcastNewState(newState) {
+  saveState(newState)
+  broadcastChannel.postMessage(newState)
+  updateDisplay()
+}
+
+/***************************************************************
+ * Settings Functions
+ ***************************************************************/
+
+function loadSettings() {
+  return loadFromLocalStorage<Settings>(STORAGE_KEYS.settings)
+}
+
+function saveSettings(_settings: Settings): void {
+  localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(_settings))
+}
+
+function applySettings(_settings: Settings) {
+  setBackgroundImage(_settings.bgImage)
+}
+
+/***************************************************************
+ * Display Functions
+ ***************************************************************/
 
 /**
  * Set the interval for the timer
@@ -90,7 +151,7 @@ function setTimerInterval(interval: number = 500): Timer {
 
       if (newRemaining <= 0) {
         // Countdown has reached zero, reset state
-        state = initState()
+        state = INITIAL_STATE
         broadcastNewState(state)
       } else {
         // Still counting down
@@ -123,14 +184,13 @@ function updateDisplay() {
   startStopBtn.textContent = state.running ? "Stop" : "Start"
 }
 
-/**
- * Broadcast the current state to other tabs and save locally
- */
-function broadcastNewState(newState) {
-  saveStateToLocalStorage(newState)
-  broadcastChannel.postMessage(newState)
-  updateDisplay()
+function setBackgroundImage(image: string) {
+  document.body.style.backgroundImage = `url('${image}')`
 }
+
+/***************************************************************
+ * Initialization Functions
+ ***************************************************************/
 
 /**
  * Initialize event listeners
@@ -141,7 +201,7 @@ function initListeners(): void {
     if (!event.data) return
     state = event.data
     // Persist new state
-    saveStateToLocalStorage(state)
+    saveState(state)
     // Update our display
     updateDisplay()
   }
@@ -153,7 +213,7 @@ function initListeners(): void {
       state.running = true
       // If countdown has ended (remainingMs <= 0), reset it to 25 min
       if (state.remaining <= 0) {
-        state.remaining = TIMERS.pomodoro
+        state.remaining = TIMERS.focus
       }
       state.endTime = Date.now() + state.remaining
     } else {
@@ -171,26 +231,58 @@ function initListeners(): void {
 
   // Reset button
   resetBtn.onclick = () => {
-    state = initState()
+    setCurrentTimer(state.timer)
     broadcastNewState(state)
   }
 
+  // Timer buttons
   timerFocusBtn.onclick = () => {
-    setCurrentTimer("pomodoro")
+    setCurrentTimer("focus")
   }
-
   timerShortBtn.onclick = () => {
     setCurrentTimer("shortBreak")
   }
-
   timerLongBtn.onclick = () => {
     setCurrentTimer("longBreak")
   }
+
+  // Settings
+  settingsBtn.onclick = () => {
+    settingsModal.style.display = "flex"
+  }
+  closeModalBtn.addEventListener("click", () => {
+    settingsModal.style.display = "none"
+    // Reapply settings to revert to the previous state
+    applySettings(settings)
+  })
+  saveBtn.onclick = () => {
+    if (bgImageSelect.value) {
+      settings.bgImage = bgImageSelect.value
+    }
+    settings.sound = soundCheckbox.checked
+    settings.soundBreaks = soundBreaksCheckbox.checked
+    saveSettings(settings)
+    applySettings(settings)
+    // Close the modal after saving preferences
+    settingsModal.style.display = "none"
+  }
+  // Event listener for background image select changes
+  bgImageSelect.onchange = (event) => {
+    const selectedImage = (event.target as HTMLSelectElement).value
+    if (selectedImage) {
+      setBackgroundImage(selectedImage)
+    }
+  }
 }
 
+/**
+/**
+ * Initialize the script
+ */
 function init() {
-  state = loadStateFromLocalStorage() || initState()
-
+  state = loadState() || INITIAL_STATE
+  settings = loadSettings() || INITIAL_SETTINGS
+  applySettings(settings)
   if (state.running) {
     const now = Date.now()
     const newRemaining = state.endTime - now
@@ -199,23 +291,22 @@ function init() {
       state.running = false
       state.remaining = 0
       state.endTime = 0
-      saveStateToLocalStorage(state)
+      saveState(state)
     } else {
       state.remaining = newRemaining
     }
   }
-
   initListeners()
-
-  // On page load, sync the display
   updateDisplay()
-
   setTimerInterval()
 }
 
+// Initialize the script
 init()
-// State variables
 
+/***************************************************************
+ * Debug Functions
+ ***************************************************************/
 // DEBUGGING
 // Debug shortcut to set timer to 3 seconds. Useful for testing how breaks work when timer runs out.
 document.addEventListener("keydown", (event) => {
