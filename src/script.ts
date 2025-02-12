@@ -115,8 +115,18 @@ function setCurrentTimer(timer: keyof typeof TIMERS) {
  */
 function broadcastNewState(newState) {
   saveState(newState)
-  broadcastChannel.postMessage(newState)
+  broadcastChannel.postMessage({
+    type: "state",
+    state: newState
+  })
   updateDisplay()
+}
+
+function broadcastMessage(message) {
+  broadcastChannel.postMessage({
+    type: "message",
+    message,
+  })
 }
 
 /***************************************************************
@@ -205,20 +215,37 @@ function setBackgroundImage(image: string) {
 /**
  * Play the timer buzzer sound if enabled in settings and not currently playing
  */
-async function playTimerSound() {
-  // Play sound if enabled in settings
+function playTimerSound() {
+  // Play sound if enabled in settings and not currently playing
   if (!state.playingSound &&
     (state.timer === "focus" && settings.sound) ||
-    (state.timer.includes("break") && settings.soundBreaks)
+    (state.timer.includes("Break") && settings.soundBreaks)
   ) {
-    if (typeof audio != "object") {
-      audio = new Audio("assets/sounds/alarm1.mp3")
-    }
     state.playingSound = true
-    await audio.play()
-    state.playingSound = false
-    // Notify other tabs that the sound has stopped playing
-    broadcastNewState(state)
+    console.log("Playing sound")
+    audio.play().catch((error) => {
+      // Check if the error name is "NotAllowedError"
+      if (error.name === "NotAllowedError") {
+        console.error("Sound playback prevented [NotAllowedError]");
+        state.playingSound = false
+        broadcastNewState(state)
+        // Request other tabs to play sound
+        broadcastMessage("playSound")
+      } else {
+        // Handle other possible errors
+        console.error("Audio play error:", error);
+      }
+    })
+  } else {
+    console.log("Not playing sound in this tab", state, settings)
+    // Set a timeout to reset playingSound state after 5 seconds
+    // This is just a fallback in case audio.onended is not triggered
+    if (!state.playingSound) {
+      setTimeout(() => {
+        state.playingSound = false
+        broadcastNewState(state)
+      }, 5000)
+    }
   }
 }
 
@@ -233,11 +260,20 @@ function initListeners(): void {
   // Listen for incoming messages from other tabs
   broadcastChannel.onmessage = (event) => {
     if (!event.data) return
-    state = event.data
-    // Persist new state
-    saveState(state)
-    // Update our display
-    updateDisplay()
+    if (event.data.type === "state") {
+      console.log("State received:", event.data)
+      state = event.data.state
+      saveState(state)
+      updateDisplay()
+    } else if (event.data.type === "message") {
+      console.log("Message received:", event.data.message)
+      const message = event.data.message
+      if (message === "playSound") {
+        playTimerSound()
+      }
+    } else {
+      console.warn("Unknown message type:", event.data.type, event.data)
+    }
   }
 
   // Start/Stop button
@@ -265,8 +301,8 @@ function initListeners(): void {
 
   // Reset button
   resetBtn.onclick = () => {
+    state.playingSound = false // Reset just in case
     setCurrentTimer(state.timer)
-    broadcastNewState(state)
   }
 
   // Timer buttons
@@ -307,6 +343,12 @@ function initListeners(): void {
       setBackgroundImage(selectedImage)
     }
   }
+
+  audio.addEventListener("ended", () => {
+    state.playingSound = false
+    broadcastNewState(state)
+    console.log("Sound ended", state)
+  })
 }
 
 /**
@@ -315,6 +357,7 @@ function initListeners(): void {
  */
 function init() {
   state = loadState() || INITIAL_STATE
+  state.playingSound = false // Reset playingSound state
   settings = loadSettings() || INITIAL_SETTINGS
   applySettings(settings)
   if (state.running) {
@@ -330,6 +373,9 @@ function init() {
       state.remaining = newRemaining
     }
   }
+  // Initialize the audio element
+  audio = new Audio("assets/sounds/alarm1.mp3")
+
   initListeners()
   updateDisplay()
   setTimerInterval()
