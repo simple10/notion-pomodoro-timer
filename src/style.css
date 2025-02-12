@@ -112,20 +112,23 @@ body {
 }
 
 .modal-content {
+  position: relative;
   width: 300px;
   font-family: Rubik;
   color: black;
   align-items: center;
   justify-content: center;
   background-color: #f7f6f3;
-  padding: 30px;
+  padding: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
 }
 
 .close-btn {
+  position: absolute;
+  top: 0;
+  right: 10px;
   color: #000;
-  float: right;
   font-size: 30px;
   font-weight: bold;
   cursor: pointer;

@@ -328,14 +328,15 @@ function initListeners(): void {
   }
 
   // Settings
-  settingsBtn.onclick = () => {
-    settingsModal.style.display = "flex"
-  }
-  closeModalBtn.addEventListener("click", () => {
+  function closeModal() {
     settingsModal.style.display = "none"
     // Reapply settings to revert to the previous state
     applySettings(settings)
-  })
+  }
+  settingsBtn.onclick = () => {
+    settingsModal.style.display = "flex"
+  }
+  closeModalBtn.addEventListener("click", closeModal)
   saveBtn.onclick = () => {
     if (bgImageSelect.value) {
       settings.bgImage = bgImageSelect.value
@@ -343,9 +344,7 @@ function initListeners(): void {
     settings.sound = soundCheckbox.checked
     settings.soundBreaks = soundBreaksCheckbox.checked
     saveSettings(settings)
-    applySettings(settings)
-    // Close the modal after saving preferences
-    settingsModal.style.display = "none"
+    closeModal()
   }
   // Event listener for background image select changes
   bgImageSelect.onchange = (event) => {
