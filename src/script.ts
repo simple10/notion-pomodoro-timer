@@ -37,13 +37,14 @@ const timerDisplay = document.getElementById("time-left")
 const startStopBtn = document.getElementById("start-stop-btn")
 const stopBtn = document.getElementById("stopBtn")
 const resetBtn = document.getElementById("reset-btn")
+const timerFocusBtn = document.getElementById("timer-focus-btn")
+const timerShortBtn = document.getElementById("timer-short-btn")
+const timerLongBtn = document.getElementById("timer-long-btn")
 
 /***************************************************************
  * Broadcast Channel Setup
  ***************************************************************/
 const broadcastChannel = new BroadcastChannel(CHANNEL_NAME)
-
-
 
 /**
  * Attempt to load state from localStorage
@@ -66,6 +67,16 @@ function saveStateToLocalStorage(state: State): void {
 }
 
 /**
+ * Set the current timer
+ * Called when the user clicks on the timer buttons
+ */
+function setCurrentTimer(timer: keyof typeof TIMERS) {
+  state.remaining = TIMERS[timer]
+  state.endTime = Date.now() + state.remaining
+  broadcastNewState(state)
+}
+
+/**
  * Set the interval for the timer
  * @param interval - interval in milliseconds, 500 is twice a second
  */
@@ -74,61 +85,21 @@ function setTimerInterval(interval: number = 500): Timer {
   timerInterval = setInterval(() => {
     if (state.running) {
       // Recalculate how much time is left
-      const now = Date.now();
-      const newRemaining = state.endTime - now;
+      const now = Date.now()
+      const newRemaining = state.endTime - now
 
       if (newRemaining <= 0) {
         // Countdown has reached zero, reset state
         state = initState()
-        broadcastNewState(state);
+        broadcastNewState(state)
       } else {
         // Still counting down
-        state.remaining = newRemaining;
-        updateDisplay();
+        state.remaining = newRemaining
+        updateDisplay()
       }
     }
-  }, interval); // update 5 times a second
+  }, interval) // update 5 times a second
   return timerInterval
-}
-
-
-function initListeners(): void {
-  // Listen for incoming messages from other tabs
-  broadcastChannel.onmessage = (event) => {
-    if (!event.data) return
-    state = event.data
-    // Persist new state
-    saveStateToLocalStorage(state)
-    // Update our display
-    updateDisplay()
-  }
-
-  // Start/Stop button
-  startStopBtn.onclick = () => {
-    if (!state.running) {
-      // Start the timer and reset if it has ended
-      state.running = true
-      // If countdown has ended (remainingMs <= 0), reset it to 25 min
-      if (state.remaining <= 0) {
-        state.remaining = TIMERS.pomodoro
-      }
-      state.endTime = Date.now() + state.remaining
-    } else {
-      // Stop the timer and store how much time was left
-      state.running = false
-      const now = Date.now()
-      state.remaining = state.endTime - now
-      if (state.remaining < 0) state.remaining = 0
-      state.endTime = 0
-    }
-    broadcastNewState(state)
-  }
-
-  // Reset button
-  resetBtn.onclick = () => {
-    state = initState()
-    broadcastNewState(state)
-  }
 }
 
 /**
@@ -161,7 +132,61 @@ function broadcastNewState(newState) {
   updateDisplay()
 }
 
+/**
+ * Initialize event listeners
+ */
+function initListeners(): void {
+  // Listen for incoming messages from other tabs
+  broadcastChannel.onmessage = (event) => {
+    if (!event.data) return
+    state = event.data
+    // Persist new state
+    saveStateToLocalStorage(state)
+    // Update our display
+    updateDisplay()
+  }
 
+  // Start/Stop button
+  startStopBtn.onclick = () => {
+    if (!state.running) {
+      // Start the timer and reset if it has ended
+      state.running = true
+      // If countdown has ended (remainingMs <= 0), reset it to 25 min
+      if (state.remaining <= 0) {
+        state.remaining = TIMERS.pomodoro
+      }
+      state.endTime = Date.now() + state.remaining
+    } else {
+      // Stop the timer and store how much time was left
+      state.running = false
+      const now = Date.now()
+      state.remaining = state.endTime - now
+      if (state.remaining < 0) state.remaining = 0
+      state.endTime = 0
+    }
+    broadcastNewState(state)
+  }
+  // Enable clicking on the timer display to start/stop the timer
+  timerDisplay.onclick = startStopBtn.onclick
+
+  // Reset button
+  resetBtn.onclick = () => {
+    state = initState()
+    broadcastNewState(state)
+  }
+
+  timerFocusBtn.onclick = () => {
+    setCurrentTimer("pomodoro")
+  }
+
+  timerShortBtn.onclick = () => {
+    setCurrentTimer("shortBreak")
+  }
+
+  timerLongBtn.onclick = () => {
+    setCurrentTimer("longBreak")
+  }
+}
 
 function init() {
   state = loadStateFromLocalStorage() || initState()
