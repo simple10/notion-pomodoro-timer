@@ -34,7 +34,7 @@ body {
   height: 100vh;
   max-width: 500px;
   margin: 0 auto;
-  padding: 1.1rem;
+  /* padding: 1.1rem; */
   box-sizing: border-box;
 }
 
@@ -61,7 +61,7 @@ body {
 /* Time left styles */
 #time-left {
   font-family: "Karla", sans-serif;
-  font-size: 10.375rem;
+  font-size: clamp(3rem, 30vw, 10.375rem);
   font-weight: 800;
   text-align: center;
   margin-bottom: 1rem;
@@ -84,6 +84,12 @@ body {
   text-align: center;
   transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
   background-color: transparent; /* Set the background color to transparent */
+}
+
+@media (max-width: 400px) {
+  .interval-btn span {
+    display: none;
+  }
 }
 
 .interval-btn:hover,
@@ -202,7 +208,7 @@ select {
   }
 
   #pomodoro-container {
-    max-width: 90%;
+    max-width: 100%;
   }
 
   /* Adjust other styles as needed for responsive behavior */
